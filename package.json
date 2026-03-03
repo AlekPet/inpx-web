@@ -1,6 +1,6 @@
 {
   "name": "inpx-web",
-  "version": "1.5.8",
+  "version": "1.5.9",
   "author": "Book Pauk <bookpauk@gmail.com>",
   "license": "CC0-1.0",
   "repository": "bookpauk/inpx-web",
@@ -8,7 +8,7 @@
     "node": ">=16.16.0"
   },
   "scripts": {
-    "dev": "nodemon --inspect --ignore server/.inpx-web --ignore client --exec 'node --expose-gc server --lib-dir=server/.inpx-web/lib'",
+    "dev": "nodemon --inspect --ignore server/.inpx-web --ignore client --exec node --expose-gc server --lib-dir=server/.inpx-web/lib",
     "build:client": "webpack --config build/webpack.prod.config.js",
     "build:linux": "npm run build:client && node build/prepkg.js linux && pkg -t node16-linux-x64 -C GZip --options max-old-space-size=4096,expose-gc -o dist/linux/inpx-web .",
     "build:linux-arm64": "npm run build:client && node build/prepkg.js linux-arm64 && pkg -t node16-linuxstatic-arm64 -C GZip --options max-old-space-size=4096,expose-gc -o dist/linux-arm64/inpx-web .",
@@ -69,6 +69,7 @@
     "localforage": "^1.10.0",
     "lodash": "^4.17.21",
     "minimist": "^1.2.8",
+    "node-7z": "^3.0.0",
     "node-stream-zip": "^1.15.0",
     "quasar": "^2.15.1",
     "safe-buffer": "^5.2.1",
