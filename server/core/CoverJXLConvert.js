@@ -1,6 +1,6 @@
 const fs = require("fs-extra");
 const path = require("path");
-const ZipReader  = require("./ZipReader.js");
+const ZipReader = require("./ZipReader.js");
 // const sharp  = require("sharp");
 const { execSync } = require('node:child_process');
 
@@ -118,54 +118,54 @@ const { execSync } = require('node:child_process');
 // }
 
 async function getCoverBuff(pathCover, entryBook) {
-  const zipReader = new ZipReader();
+    const zipReader = new ZipReader();
 
-  try {
-    await zipReader.open(pathCover);
+    try {
+        await zipReader.open(pathCover);
 
-    if (entryBook in zipReader.entries) 
-      return await zipReader.extractToBuf(entryBook);
-    
-  } catch (e) {
-    console.error(e);
-    return null;
-  } finally {
-    zipReader.close();
-  }
+        if (entryBook in zipReader.entries)
+            return await zipReader.extractToBuf(entryBook);
+
+    } catch (e) {
+        console.error(e);
+        return null;
+    } finally {
+        zipReader.close();
+    }
 }
 
 // -- Альтернативный вариант использовать библиотеку: https://github.com/libjxl/libjxl
 // -- Необходимо расположить исполняемый файл djxl рядом с исполняемым файлом inpx-web,
 // -- или добавить путь к djxl глобально в переменную среды.
-async function extractZipCoverAndConvert(config, hash, bookFile, entryBook, ext=".png") {
-  try {
-    const pathCover = path.join(config.libDir, "covers", bookFile);
-    
-    if(!await fs.pathExists(pathCover)){
-      console.log(`❌ Book "${bookFile}" cover not found!`)
-      return null
+async function extractZipCoverAndConvert(config, hash, bookFile, entryBook, ext = ".png") {
+    try {
+        const pathCover = path.join(config.libDir, "covers", bookFile);
+
+        if (!await fs.pathExists(pathCover)) {
+            console.log(`❌ Book "${bookFile}" cover not found!`)
+            return null
+        }
+
+        const imageBuffer = await getCoverBuff(pathCover, entryBook);
+        if (!imageBuffer) {
+            console.log(`❌ Cover buffer data is incorrect!`)
+            return null
+        }
+
+        const outputImage = path.join(config.bookDir, `${hash}${ext}`);
+
+        const output = execSync(`djxl - "${outputImage}"`, {
+            input: imageBuffer,
+            encoding: "utf8",
+            maxBuffer: 50 * 1024 * 1024,
+        }).toString();
+        console.log(`Output: ${output}`);
+
+        return `${config.bookPathStatic}/${hash}${ext}`
+    } catch (error) {
+        console.error(`Error: ${error.message}`);
+        return null
     }
-
-    const imageBuffer = await getCoverBuff(pathCover, entryBook);
-    if(!imageBuffer){
-      console.log(`❌ Cover buffer data is incorrect!`)
-      return null
-    }
-
-    const outputImage = path.join(config.bookDir, `${hash}${ext}`);
-
-    const output = execSync(`djxl - "${outputImage}"`, {
-      input: imageBuffer,
-      encoding: "utf8",
-      maxBuffer: 50 * 1024 * 1024,
-    }).toString();
-    console.log(`Output: ${output}`);
-
-    return `${config.bookPathStatic}/${hash}${ext}`
-  } catch (error) {
-    console.error(`Error: ${error.message}`);
-    return null
-  }
 }
 
 module.exports = extractZipCoverAndConvert;

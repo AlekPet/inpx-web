@@ -22,6 +22,7 @@ const Fb2Helper = require('./fb2/Fb2Helper');
 // 7z read and covers
 const seven7z = require("node-7z");
 const extractZipCoverAndConvert = require("./CoverJXLConvert");
+const Fb2AppendImages = require("./Fb2AppendImages");
 
 //server states
 const ssNormal = 'normal';
@@ -410,52 +411,36 @@ class WebWorker {
             
             await fs.copy(fullPath, outFile);
             return outFile;
-        } else {// файл в zip-архиве
-            const archiveExt = folder.split(".").slice(-1)[0];
+        } else {
+          // файл в zip-архиве
+          if (await fs.pathExists(folder)) {
+            // файл в zip-архиве
+            const zipReader = new ZipReader();
+            await zipReader.open(folder);
 
-            if (archiveExt === "zip" && await fs.pathExists(folder)) {
-                // файл в zip-архиве
-                const zipReader = new ZipReader();
-                await zipReader.open(folder);
+            try {
+              await zipReader.extractToFile(file, outFile);
 
-                try {
-                    await zipReader.extractToFile(file, outFile);
+              if (!(await fs.pathExists(outFile))) {
+                //не удалось найти в архиве, попробуем имя файла в кодировке cp866
+                await zipReader.extractToFile(
+                  iconv.encode(file, "cp866").toString(),
+                  outFile,
+                );
+              }
 
-                    if (!await fs.pathExists(outFile)) {//не удалось найти в архиве, попробуем имя файла в кодировке cp866
-                        await zipReader.extractToFile(iconv.encode(file, 'cp866').toString(), outFile);                    
-                    }
-
-                    return outFile;
-                } finally {
-                    await zipReader.close();
-                }
+              return outFile;
+            } finally {
+              await zipReader.close();
             }
-
-            const folder7z = folder.replace(".zip",".7z");
+          } else {
+            const folder7z = folder.replace(".zip", ".7z");
             if (await fs.pathExists(folder7z)) {
-                await this._extractFrom7z(folder7z, file, outFile);
-                return outFile;
-            } 
+              await Fb2AppendImages(this.config, libFolder, file, outFile);
+              return outFile;
+            }
+          }
         }
-    }
-
-    async _extractFrom7z(archivePath, fileName, outFile) {
-        return new Promise((resolve, reject) => {
-            const stream = seven7z.extractFull(archivePath, this.config.tempDir, {
-                $cherryPick: fileName, // Извлечь только конкретный файл
-                recursive: true
-            });
-            
-            stream.on('end', () => {
-                // Файл должен быть в tempDir с оригинальным именем
-                const extractedPath = `${this.config.tempDir}/${fileName}`;
-                fs.move(extractedPath, outFile, { overwrite: true })
-                    .then(() => resolve())
-                    .catch(reject);
-            });
-            
-            stream.on('error', reject);
-        });
     }
 
     async restoreBook(bookUid, libFolder, libFile, downFileName) {
