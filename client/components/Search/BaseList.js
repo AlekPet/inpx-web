@@ -358,7 +358,6 @@ export default class BaseList {
         const s = this.search;
 
         const emptyFieldValue = '?';
-        const maxUtf8Char = String.fromCodePoint(0xFFFFF);
         const ruAlphabet = 'абвгдеёжзийклмнопрстуфхцчшщъыьэюя';
         const enAlphabet = 'abcdefghijklmnopqrstuvwxyz';
         const enru = new Set((ruAlphabet + enAlphabet).split(''));
@@ -407,8 +406,7 @@ export default class BaseList {
                 const re = new RegExp(searchValue, 'i');
                 return re.test(bookValue);
             } else {
-                //where = `@dirtyIndexLR('value', ${db.esc(a)}, ${db.esc(a + maxUtf8Char)})`;
-                return bookValue.localeCompare(searchValue) >= 0 && bookValue.localeCompare(searchValue + maxUtf8Char) <= 0;
+                return bookValue !== emptyFieldValue && bookValue.indexOf(searchValue) >= 0;
             }
         };
 
