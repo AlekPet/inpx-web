@@ -668,7 +668,18 @@ class Search {
     }
 
     get newReleaseAvailable() {
-        return (this.config.latestVersion && this.config.version != this.config.latestVersion);
+        if (!this.config.latestVersion || !this.config.version)
+            return false;
+        const parse = (v) => v.replace(/^v/, '').split('.').map(Number);
+        const cur = parse(this.config.version);
+        const latest = parse(this.config.latestVersion);
+        const len = Math.max(cur.length, latest.length);
+        for (let i = 0; i < len; i++) {
+            const a = cur[i] || 0;
+            const b = latest[i] || 0;
+            if (a !== b) return b > a;
+        }
+        return false;
     }
 
     get recStruct() {
