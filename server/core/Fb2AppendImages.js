@@ -1,4 +1,5 @@
 const fs = require("fs-extra");
+const iconv = require('iconv-lite');
 const path = require("path");
 const seven7z = require("node-7z");
 const ZipReader = require("./ZipReader.js");
@@ -7,10 +8,12 @@ const { execFileSync } = require("node:child_process");
 const convertImageToBase64 = (filePath, imageExt = "png") => {
     try {
         const pngBuffer = fs.readFileSync(filePath);
+        // Только данные картинки
         const base64String = Buffer.from(pngBuffer).toString("base64");
-        const dataUriString = `data:image/${imageExt};base64,${base64String}`;
+        // С заголовком
+        // const dataUriString = `data:image/${imageExt};base64,${base64String}`;
 
-        return dataUriString;
+        return base64String;
     } catch (error) {
         console.error(`Error converting file to Base64: ${error.message}`);
         throw error;
@@ -156,25 +159,48 @@ async function extractFrom7z(config, arhivePath, libFolder, fileName, outFile) {
         stream.on("end", async (e) => {
             const extractedPath = `${config.tempDir}/${fileName}`;
 
-            const fileBuffer = (await fs.readFile(extractedPath)).toString("utf-8");
+            const rawBuffer = await fs.readFile(extractedPath);
+            
+            // Определяем кодировку
+            const preview = rawBuffer.slice(0, 500).toString("ascii");
+            const match = preview.match(/encoding=["']([^"']+)["']/i);
+            const encoding = match ? match[1].toLowerCase() : "windows-1251"; 
+
+            let fb2Text = iconv.decode(rawBuffer, encoding);
+            
+            // Чистый Base64 (без заголовка "data:image/png;base64,")
             const entries = await getImagesBase64(config, libFolder, fileName);
 
-            let fb2bufferRepl = fileBuffer;
-            for (const e in entries) {
-                fb2bufferRepl = fb2bufferRepl.replace(
-                    `<image l:href="#${e}"/>`,
-                    `<image l:href="${entries[e]}"/>`,
-                );
+            // Генерируем блоки <binary> для вставки в конец файла
+            let binaryBlocks = "";
+            for (const imageName in entries) {
+                const pureBase64 = entries[imageName].replace(/^data:image\/\w+;base64,/, "");
+                
+                // Определяем тип контента (png или jpeg)
+                const contentType = imageName.toLowerCase().endsWith(".jpg") || imageName.toLowerCase().endsWith(".jpeg") 
+                    ? "image/jpeg" 
+                    : "image/png";
+
+                binaryBlocks += `\n<binary id="${imageName}" content-type="${contentType}">${pureBase64}</binary>`;
             }
 
-            await fs.writeFile(extractedPath, fb2bufferRepl, {
-                flag: "w",
-            });
+            // Вставляем блоки <binary>
+            if (fb2Text.includes("</FictionBook>")) {
+                fb2Text = fb2Text.replace("</FictionBook>", `${binaryBlocks}\n</FictionBook>`);
+            } else {
+                fb2Text += binaryBlocks;
+            }
+
+            // Сохраняем в UTF-8
+            fb2Text = fb2Text.replace(/encoding=["']([^"']+)["']/i, 'encoding="utf-8"');
+
+            await fs.writeFile(extractedPath, fb2Text, "utf-8");
 
             fs.move(extractedPath, outFile, { overwrite: true })
                 .then(() => resolve())
                 .catch(reject);
         });
+
 
         stream.on("error", reject);
     });

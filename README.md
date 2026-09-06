@@ -145,6 +145,11 @@ Options:
     // на место ${DOWNLOAD_LINK} будет подставлена ссылка на скачивание файла книги
     // пример: "https://mydomain.ru/#/reader?url=http://127.0.0.1:8086${DOWNLOAD_URI}"
     // на место ${DOWNLOAD_URI} будут подставлены параметры (без имени хоста) из ссылки на скачивание файла книги
+    // ---- Читалка ----
+    // Как вариант, можно использовать читалку: https://github.com/chitalka/reader
+    // Или скачать здесь: https://drive.google.com/file/d/1IsuCANK86W9gR5OAoZF_pVQhHoV4bLEL/view?usp=sharing
+    // Распаковать архив и переместить папку reader в .inpx-web\public 
+    // В конфиге в bookReadLink нужно прописать "bookReadLink": "/reader/?${DOWNLOAD_LINK}",
     "bookReadLink": "",
 
     // включить(true)/выключить(false) журналирование
