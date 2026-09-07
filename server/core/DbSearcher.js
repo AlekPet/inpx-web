@@ -77,7 +77,7 @@ class DbSearcher {
                 })()
             `;
         } else {
-            where = `@dirtyIndexLR('value', ${db.esc(a)}, ${db.esc(a + maxUtf8Char)})`;
+            where = `@indexIter('value', (v) => (v !== ${db.esc(emptyFieldValue)} && v.indexOf(${db.esc(a)}) >= 0) )`;
         }
 
         return where;
